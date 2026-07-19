@@ -1,0 +1,24 @@
+[project]
+name = "butcher-shop-sales"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { email = "obrebski.mathias@proton.me" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "ipykernel>=7.3.0",
+    "openpyxl>=3.1.5",
+    "pandas>=3.0.3",
+    "plotly>=6.9.0",
+    "regex>=2026.7.10",
+    "streamlit>=1.59.2",
+]
+
+[project.scripts]
+butcher-shop-sales = "butcher_shop_sales:main"
+
+[build-system]
+requires = ["uv_build>=0.11.25,<0.12.0"]
+build-backend = "uv_build"
