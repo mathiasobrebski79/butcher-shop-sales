@@ -2,6 +2,7 @@
 import os 
 
 import pandas as pd
+import numpy as np
 
 from butcher_shop_sales.settings import DATA_DIR
 
@@ -74,8 +75,13 @@ preparation_types = [
     "merguez",
     "andouilette",
     "chair saucisse",
+    "toulouse",
     "saucisse de toulouse",
-    "chorizo"
+    "toulouse",
+    "saucisse de veau",
+    "chorizo",
+    "chipolatas herbes",
+    "chipo herbes",
     "chipolata",
     "chipo",
     "cordon bleu",
@@ -98,7 +104,12 @@ unidentified_cuts = {
     "tournedos" : "boeuf",
     "tendron" : "veau",
     "tranche poitrine" : "porc",
-    "cotelette" : "agneau"
+    "cotelette" : "agneau",
+    "toulouse" : "porc",
+    "chair" : "porc",
+    "merguez" : "boeuf-agneau",
+    "chipo" : "porc",
+    "cordon bleu" : "volaille"
 }
 
 others = [
@@ -131,12 +142,18 @@ df_enrich["preparation"] = \
 
 df_enrich["preparation"] = df_enrich["preparation"]\
     .str.replace({
+        "chipolatas herbes" : "chipolata herbe", 
+        "chipo herbes" : "chipolata herbe",
+        })\
+    .str.replace({
         "brochette" : "BROCHETTE", 
-        "chipolata" : "CHIPOLATA"
+        "chipolata" : "CHIPOLATA",
+        "saucisse de toulouse" : "SAUCISSE DE TOULOUSE"
         })\
     .str.replace({
         "broch" : "brochette", 
-        "chipo" : "chipolata"
+        "chipo" : "chipolata",
+        "toulouse"  : "saucisse de toulouse"
         })\
     .str.lower()
 
@@ -156,16 +173,204 @@ df_enrich["animal"] = df_enrich["animal_brut"]\
         df_enrich["animal_tmp"]
     )
 
+
 # %%
 
-# df_enrich[["libelle","animal_brut","non_identifie","animal_tmp","animal"]]\
-#     .drop_duplicates()\
-    # .query("animal!=animal")
+beef_cuts = [
+    "cote",
+    "aloyau a l'os",
+    "rumsteck",
+    "tranch",
+    "onglet",
+    "bavette aloyau",
+    "bavette d'aloyau",
+    "bavette flanchet",
+    "filet",
+    "tournedos",
+    "faux filet",
+    "entrecote",
+    "poire",
+    "macreuse",
+    "hampe",
+    "basse cote",
+    "araignee",
+    "gite noix",
+    "bifteck hache",
+    "paleron",
+    "plat cote",
+    "jarret",
+    "bourg",
+    "queue",
+    "os a moelle",
+    "pieces a fondu",
+    "steak",
+    "poitrine",
+    "pot au feu",
+    "t bone",
+    "pave",
+    "abt.*os",
+    "roti"
+]
+porc_cuts = [
+    "pave",
+    "araignee",
+    "cote echine",
+    "cote filet",
+    "cote 1ere",
+    "filet mignon",
+    "echine",
+    "carre",
+    "filet",
+    "grillade",
+    "saute",
+    "poitrine",
+    "chair",
+    "travers",
+    "barde",
+    "farce",
+    "brasse",
+    "ribs",
+    "roti"
+]
+veal_cuts = [
+    "epaule",
+    "filet",
+    "nx",
+    "noix",
+    "cote premiere",
+    "tendron",
+    "blanquette",
+    "foie",
+    "rognon",
+    "grenadin",
+    "escalope",
+    "cote",
+    "osso bucco",
+    "paupiette",
+    "jarret"
+]
+lamb_cuts = [
+    "collier",
+    "gigot entier",
+    "souris",
+    "tranche gigot",
+    "cote filet",
+    "cote premiere",
+    "cote decouverte",
+    "epaule",
+    "poitrine",
+    "rognon",
+    "roti",
+    "tranche",
+    "cotelette",
+    "navarin",
+    "tr"
+]
+chicken_cuts = [
+    "cuisse",
+    "crapodine",
+    "aile",
+    "pilon",
+    "cuiss ",
+    "hdc",
+    "filet",
+    "flts"
+]
+
+
+df_enrich["morceau"] = pd.NA
+
+# beef cuts
+beef_cut_pat = r"(" + "|".join(beef_cuts) + ")"
+
+mask_beef = df_enrich["animal"]=='boeuf'
+
+df_enrich.loc[mask_beef,"morceau"] = \
+    df_enrich.loc[mask_beef,"libelle"] \
+        .str.extract(beef_cut_pat).values
+
+df_enrich["morceau"] = df_enrich["morceau"]\
+        .str.replace({
+            "bavette d'aloyau" : "bavette aloyau",
+             "tranch" : "tranche",
+             "abt v.bovine os" : "os a moelle"
+             })
+
+# porc cuts 
+porc_cut_pat = r"(" + "|".join(porc_cuts) + ")"
+
+mask_porc = df_enrich["animal"]=='porc'
+
+df_enrich.loc[mask_porc,"morceau"] = \
+    df_enrich.loc[mask_porc,"libelle"] \
+        .str.extract(porc_cut_pat).values
+
+
+# veal cuts
+veal_cut_pat = r"(" + "|".join(veal_cuts) + ")"
+
+mask_veal = df_enrich["animal"]=='veau'
+
+df_enrich.loc[mask_veal,"morceau"] = \
+    df_enrich.loc[mask_veal,"libelle"] \
+        .str.extract(veal_cut_pat).values
+
+df_enrich.loc[mask_veal,"morceau"] = \
+    df_enrich.loc[mask_veal,"morceau"] \
+        .str.replace({
+            "nx" : "noix",
+             "jarret" : "osso bucco"
+             }).values
+
+# lamb cuts
+lamb_cut_pat = r"(" + "|".join(lamb_cuts) + ")"
+
+mask_lamb = df_enrich ["animal"]=='agneau'
+
+df_enrich.loc[mask_lamb,"morceau"] = \
+    df_enrich.loc[mask_lamb,"libelle"] \
+        .str.extract(lamb_cut_pat).values
+
+# chicken cuts
+chicken_cut_pat = r"(" + "|".join(chicken_cuts) + ")"
+
+mask_chicken = df_enrich["animal"]=='poulet'
+
+df_enrich.loc[mask_chicken,"morceau"] = \
+    df_enrich.loc[mask_chicken,"libelle"] \
+        .str.extract(chicken_cut_pat).values
+
+df_enrich.loc[mask_chicken,"morceau"] = \
+    df_enrich.loc[mask_chicken,"morceau"] \
+        .str.replace({
+            "flts" : "filet",
+             "hdc" : "cuisse",
+             "cuiss " : "cuisse"
+             }).values
+
+# %%
+df_enrich["morceau_preparation"] = \
+    df_enrich["morceau"].where(
+        ~df_enrich["morceau"].isna(),
+        df_enrich["preparation"]
+    )
+
+# %%
+df_enrich[["libelle","animal","morceau","morceau_preparation"]]\
+    .drop_duplicates()\
+    [df_enrich["animal"].str.contains("poulet")]
+
+    # .query("preparation contains 'chipo'")
+
 # %%
 
 df_final = df_enrich[
-    ["libelle","animal","preparation","annee","semaine","date","valeur_prix_vente"]
+    ["libelle","animal","morceau_preparation","preparation","morceau","annee","semaine","date","valeur_prix_vente"]
 ].fillna("autre")
+
+df_final["produit"] = df_final[["animal","morceau_preparation"]].agg('-'.join, axis=1)
+
+del df_final["morceau_preparation"]
 
 # %%
 df_final.head()
