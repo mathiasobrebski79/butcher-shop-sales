@@ -376,6 +376,17 @@ del df_final["morceau_preparation"]
 df_final.head()
 
 # %%
+# create fake 2024 data
+import random
+df_2024 = df_final.copy()
+df_2024["annee"] = "2024"
+df_2024["valeur_prix_vente"] = df_2024["valeur_prix_vente"].apply(lambda x:x*(0.5+random.random()))
+df_2024["date"] = df_2024["date"] + pd.DateOffset(years=-1)
+df_2024["date"] = df_2024["date"]
+
+df_final = pd.concat([df_final,df_2024])
+
+# %%
 
 df_final.to_excel(
     os.path.join(DATA_DIR,"processed_" + raw_data_file),

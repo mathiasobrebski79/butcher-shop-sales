@@ -66,6 +66,24 @@ selected_dates = st.sidebar.slider(
     key=f"filtre_dates_{suffix}"
 )
 
+annees_toutes = sorted(df["annee"].dropna().astype(int).unique())
+st.sidebar.write("Années")
+cols_annees_sidebar = st.sidebar.columns(len(annees_toutes))
+selected_annees = []
+for col, annee in zip(cols_annees_sidebar, annees_toutes):
+    if col.checkbox(str(annee), value=True, key=f"filtre_annee_{annee}_{suffix}"):
+        selected_annees.append(annee)
+
+semaine_min_all = int(df["semaine"].min())
+semaine_max_all = int(df["semaine"].max())
+selected_semaines = st.sidebar.slider(
+    "Semaines",
+    min_value=semaine_min_all,
+    max_value=semaine_max_all,
+    value=(semaine_min_all, semaine_max_all),
+    key=f"filtre_semaines_{suffix}",
+)
+
 # ----------------------------------------------------------------------
 # Application des filtres
 # ----------------------------------------------------------------------
@@ -76,6 +94,8 @@ mask = (
     & df['produit'].isin(selected_produits)
     & (df["date"].dt.date >= selected_dates[0])
     & (df["date"].dt.date <= selected_dates[1])
+    & df["annee"].astype(int).isin(selected_annees)
+    & df["semaine"].astype(int).between(selected_semaines[0], selected_semaines[1])
 )
 
 df_filtered = df.loc[mask]
@@ -96,11 +116,12 @@ if df_filtered.empty:
     st.stop()
 
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 CA par libellé", 
     "📈 Évolution hebdomadaire libellé",
     "📊 CA par produit", 
-    "📈 Évolution hebdomadaire produit"
+    "📈 Évolution hebdomadaire produit",
+    "📈 Évolution hebdomadaire produit par année",
     ])
  
 # ----------------------------------------------------------------------
@@ -263,3 +284,40 @@ with tab4:
     with st.expander("Voir les données filtrées"):
         st.dataframe(df_weekly_grouped, use_container_width=True)
  
+# ----------------------------------------------------------------------
+# Onglet 5 : Évolution hebdomadaire par année (barres groupées)
+# ----------------------------------------------------------------------
+with tab5:
+    st.subheader("Chiffre d'affaires par semaine, séparé par année")
+
+    if df_filtered.empty:
+        st.warning("⚠️ Aucune donnée pour cette sélection.")
+    else:
+        df_weekly_year = df_filtered.copy()
+        df_weekly_year["semaine"] = df_weekly_year["semaine"].astype(int)
+        df_weekly_year["annee"] = df_weekly_year["annee"].astype(str)  # string pour légende propre
+
+        df_weekly_year_grouped = (
+            df_weekly_year.groupby(["semaine", "annee"], as_index=False)["valeur_prix_vente"]
+            .sum()
+        )
+
+        fig_weekly_year = px.bar(
+            df_weekly_year_grouped,
+            x="semaine",
+            y="valeur_prix_vente",
+            color="annee",
+            barmode="group",
+            labels={
+                "semaine": "Semaine",
+                "valeur_prix_vente": "Chiffre d'affaires (€)",
+                "annee": "Année",
+            },
+        )
+        fig_weekly_year.update_layout(height=600, showlegend=True)
+        fig_weekly_year.update_xaxes(dtick=1)
+
+        st.plotly_chart(fig_weekly_year, use_container_width=True)
+
+        with st.expander("Voir les données filtrées"):
+            st.dataframe(df_weekly_year_grouped, use_container_width=True)
